@@ -1,0 +1,161 @@
+
+
+```{r}
+library(tidyverse)
+library(rio)
+library(DataExplorer)
+library(lattice)
+library(skimr)
+library(lattice)
+library(DataExplorer)
+library(tidyverse) # обработка данных, графики...
+library(skimr) # описательные статистики
+library(rio) # импорт фантастического количества форматов данных
+library(broom) # метла превращает результаты оценивания моделей в таблички
+library(GGally) # больше готовых графиков
+library(sjPlot) # ещё больше графиков
+library(lmtest) # диагностика линейных моделей
+library(Ecdat) # много-много разных наборов данных
+library(sjstats) # удобные мелкие функции для работы с моделями
+library(sandwich) # оценка Var для гетероскедастичности
+library(AER) # работа с инструментальными переменными
+
+
+setwd("D:/R_course/homework")
+gss <- import('gss.sav')
+glimpse(gss)     
+#1500 obs  of 54  variables
+head(gss)
+tail(gss)
+attach(gss)
+skim(gss)
+qplot(data = gss, x = age) +
+  labs(x = 'Возраст респондента', y = 'Количество', title = 'Распределение респондентов по возрасту')
+
+gss$race <- factor(race)
+gss$life <- factor(life)
+qplot(data = gss, x = race)  +
+labs(x = 'Раса респондента', y = 'Количество', title = 'Распределение респондентов по расе')
+qplot(data = gss, x = age, y = rincome)
+
+# матрица диаграмм рассеивания
+splom(gss[1:500,c(17,27,29)])
+splom(gss[,c("income","rincome","sei")])
+
+create_report(gss)
+
+# кросстаб двух факторных переменных
+library (vcd)
+library(gmodels)
+lCrossTabe(race,life)
+table(race,life)
+#  проверка значимости связи
+mytable <- xtabs(~race+life, data=gss)
+chisq.test(mytable)
+
+#графическая интерпретация  связи
+mosaic(mytable, shade = TRUE, legend = TRUE)
+
+# поиск связи между двумя количественными переменными
+newdata <- subset(gss,select=c(income, rincome, sei))
+cor(newdata, use = 'pairwise.complete.obs')
+
+# проверка значимости связи  
+library(psych)
+corr.test(x = newdata, use = 'complete') 
+
+#  кластеризация
+bier <- import('bier.sav')
+glimpse(bier) 
+skim(bier)
+# стандартизация признаков
+stand_bier <- mutate_if(bier, is.numeric, ~ as.vector(scale(.)))
+skim(stand_bier)
+bier_truncated <- subset(stand_bier,select= c(kosten, kalorien, alkohol))
+k_means_bier <- kmeans(bier_truncated, centers = 4)
+k_means_bier
+attributes(k_means_bier)
+
+#визуализация кластеров
+
+library(factoextra)
+fviz_cluster(object = k_means_bier, data = bier_truncated,
+             ellipse.type = 'convex')
+
+# график каменной осыпи для определения числа кластеров
+g1 <- fviz_nbclust(bier_truncated, kmeans, method = 'wss') +
+  labs(subtitle = 'Elbow method')
+g1
+
+# присоединяем номера кластеров к исходному набору
+bier_with_clusters <- mutate(bier, cluster = k_means_bier$cluster)
+glimpse(bier_with_clusters)
+
+# как страны производства распределились по кластерам
+attach(bier_with_clusters)
+table(cluster,herkunft)
+
+
+# вычисление матрицы расстояний
+
+bier_distance <- dist(bier_truncated, method = 'euclidian')
+
+#визуализация матрицы расстояний
+fviz_dist(bier_distance)
+bier_distance
+
+# иЕРАРХИЧЕСКИЙ КЛАСТЕРНЫЙ АНАЛИЗ
+bier_hierar <- hcut(bier_truncated, k = 4)
+bier_hierar
+
+# построение  дендограммы
+library (fpc)
+library(viridis)
+fviz_dend(bier_hierar,
+          cex = 0.5, # размер подписи
+
+              color_labels_by_k = TRUE) # цвет подписей по группам
+
+
+
+
+# линейная регрессия
+attach(gss)
+
+lin_mod <- lm(data = gss, rincome ~ age)
+
+summary(lin_mod)
+
+lin_mod <- lm(data = gss, income ~ educ+sex+age+sei)
+summary(lin_mod)
+
+plot (educ,rincome,xlab ="education",ylab="rincome")
+abline (lin_mod)
+
+ggplot(data = gss, aes(x = educ, y = rincome)) +
+  geom_point() +
+    geom_smooth(method = 'lm')
+
+qplot(data = gss, x = educ, y = rincome)
+ggnostic(model =lin_mod)
+lm(formula=income ~ educ+sex+age+sei, data=gss)
+
+
+#  логистич регрессия.не поняла,почему для религии не создались дамми переменные
+
+
+
+```
+relig=factor(relig)
+race = factor (race)
+logreg <- glm(letdie ~ sex + age + educ + relig +
+race, data=gss,family=binomial())
+summary(logreg)
+
+
+все, сдаюсь, нет больше ни сил,ни времени.
+Сергей и Оля,  мне, конечно стыдно за такое "исследование",но в оправдание скажу, что я и изначально не рассчитывала на освоение R,поскольку вряд ли мне придется его использовать,а без практики это все невозможно запомнить, мне больше было интересно "что" он может, а не "как". Но теперь,если мне понадобится нарисовать картинку, которую не может сделать EXCEL, или применить метод, которого нет в SPSS, я знаю, с чего начать,и где рыть. За что вам большое спасибо!!
+
+Ольга Михайловна
+
+
